@@ -6,4 +6,4 @@ Currently, it only supports Apple, Google, Facebook, and Line login methods, and
 If you have any better ideas or suggestions, please feel free to [submit an issue](https://github.com/rabbitonthehill/social-goauth/issues) in the [project repository](https://github.com/rabbitonthehill/social-goauth).  
 
 ## Installation
-`go get -u ydeer.com/social-goauth`
+`go get -u socialgoauth.org/social-goauth`
