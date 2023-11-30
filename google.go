@@ -1,12 +1,11 @@
 package oauth
 
 type Google struct {
+	service *Service
 }
 
-var _ Provider = (*Google)(nil)
-
-func (p Google) Do() error {
-	return nil
+func (p Google) NewGoogle(service *Service) *Google {
+	return &Google{service: service}
 }
 
 func (p Google) IDToken(token string) error {

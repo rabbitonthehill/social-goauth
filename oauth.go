@@ -2,8 +2,7 @@ package oauth
 
 import (
 	"errors"
-	"net/http"
-	"net/url"
+	"strings"
 )
 
 // AuthType is used to represent different types of third-party login methods.
@@ -27,87 +26,75 @@ var (
 	ErrInvalidIdCode       = errors.New("invalid id code")
 	ErrInvalidClientID     = errors.New("invalid client id")
 	ErrInvalidClientSecret = errors.New("invalid client secret")
-	ErrInvalidRedirectURI  = errors.New("invalid redirect uri")
+	ErrInvalidRedirectURL  = errors.New("invalid redirect url")
 )
-
-// Provider interface defines the methods that a third-party login provider should implement.
-type Provider interface {
-	Do() error
-	IDToken(token string) error
-	IdentityCode(code string) error
-}
 
 // Service represents the basic configuration for OAuth.
 type Service struct {
-	// ClientID is the identifier that is used to identify your application.
+	// ClientID Identifier assigned by the third-party login provider to identify your application.
 	ClientID string
 
-	// ClientSecret is the secret key that is used to communicate securely with the third-party login provider.
+	// ClientSecret Secret key used for secure communication with the third-party login provider.
 	ClientSecret string
 
-	// RedirectURL is the URL that the third-party login provider will redirect the user to after a successful login.
+	// RedirectURL URL that the third-party login provider redirects the user to after successful login.
 	RedirectURL string
 
-	// ProxyURL is an optional field that specifies a proxy URL to be used during the login process.
+	// ProxyURL Optional proxy URL used during the login process.
 	ProxyURL string
 
-	// AuthType is the type of third-party login provider being used.
+	// AuthType Type of third-party login provider being used.
 	AuthType AuthType
-}
 
-// UserInfo represents user information.
-type UserInfo struct {
-	// ID is the unique identifier of the user.
-	ID string
-
-	// Name is the user's full name, where the first name and last name are combined.
-	Name string
-
-	// Avatar is the file path or URL of the user's profile picture.
-	Avatar string
-
-	// Email is the email address associated with the user's account.
-	Email string
-
-	// Gender indicates the user's gender. Possible values are:
-	// 0: Unknown or not specified
-	// 1: Male
-	// 2: Female
-	Gender int8
+	// Endpoint where the OAuth server handles the authentication request.
+	Endpoint string
 }
 
 type Option func(*Service)
 
+// WithRedirectURL sets the RedirectURL option for the Service.
 func WithRedirectURL(url string) Option {
 	return func(service *Service) {
 		service.RedirectURL = url
 	}
 }
 
+// WithProxyURL sets the ProxyURL option for the Service.
 func WithProxyURL(url string) Option {
 	return func(service *Service) {
 		service.ProxyURL = url
 	}
 }
 
-func New(clientId, clientSecret string, authType AuthType, options ...Option) *Service {
-	service := &Service{
-		ClientID:     clientId,
-		ClientSecret: clientSecret,
-		AuthType:     authType,
+// Endpoint returns a URL endpoint given an input string and an endpoint base.
+// If the input string begins with "http://" or "https://", it is returned as-is.
+// If the input string begins with "/", it is appended to the endpoint base.
+// Otherwise, the input string is appended to the endpoint base with a "/" separator.
+func Endpoint(endpoint, input string) string {
+	if strings.HasPrefix(input, "http://") || strings.HasPrefix(input, "https://") {
+		return input
 	}
+
+	if strings.HasPrefix(input, "/") {
+		return endpoint + input
+	}
+
+	return endpoint + "/" + input
+}
+
+// NewService creates a new OAuth service with the provided client ID, client secret, and authentication type.
+// It also allows additional options to be applied using the Option functional parameter.
+func NewService(clientID, clientSecret string, authType AuthType, options ...Option) (*Service, error) {
+	if clientID == "" {
+		return nil, ErrInvalidClientID
+	}
+	if clientSecret == "" {
+		return nil, ErrInvalidClientSecret
+	}
+	service := &Service{ClientID: clientID, ClientSecret: clientSecret, AuthType: authType}
 	for _, opt := range options {
 		opt(service)
 	}
 
-	return service
-}
-
-func (o Service) setProxy(client *http.Client) {
-	if "" != o.ProxyURL {
-		proxy, _ := url.Parse(o.ProxyURL)
-		client.Transport = &http.Transport{
-			Proxy: http.ProxyURL(proxy),
-		}
-	}
+	return service, nil
 }
